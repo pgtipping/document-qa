@@ -53,6 +53,7 @@ A simple application that allows users to upload documents and ask questions abo
    ```
 
 5. Create upload directory:
+
    ```bash
    mkdir uploads
    ```

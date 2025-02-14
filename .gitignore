@@ -141,6 +141,7 @@ venv.bak/
 
 # mkdocs documentation
 /site
+/memory-bank
 
 # mypy
 .mypy_cache/
