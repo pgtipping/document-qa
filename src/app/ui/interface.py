@@ -1,9 +1,9 @@
 import gradio as gr
-import httpx
 from typing import List, Tuple, Optional
 import speech_recognition as sr
 import os
 from datetime import datetime
+from app.core.connection import pool
 
 
 class DocumentQAInterface:
@@ -96,11 +96,14 @@ class DocumentQAInterface:
 
         return interface
 
-    async def _handle_upload(self, file: gr.UploadData) -> List[List[str]]:
+    async def _handle_upload(
+        self,
+        file: gr.UploadData
+    ) -> List[List[str]]:
         """Handle document upload."""
         try:
             files = {"file": (file.name, open(file.name, "rb"))}
-            async with httpx.AsyncClient() as client:
+            async with pool.get_client() as client:
                 response = await client.post(
                     f"{self.api_url}/api/upload",
                     files=files
@@ -113,7 +116,7 @@ class DocumentQAInterface:
     async def _refresh_documents(self) -> List[List[str]]:
         """Refresh the document list with formatted details."""
         try:
-            async with httpx.AsyncClient() as client:
+            async with pool.get_client() as client:
                 response = await client.get(f"{self.api_url}/api/documents")
                 response.raise_for_status()
                 documents = response.json()["documents"]
@@ -162,7 +165,7 @@ class DocumentQAInterface:
             raise gr.Error("Please enter a question")
         
         try:
-            async with httpx.AsyncClient() as client:
+            async with pool.get_client() as client:
                 response = await client.post(
                     f"{self.api_url}/api/ask",
                     json={
@@ -194,7 +197,7 @@ class DocumentQAInterface:
                 question = self.recognizer.recognize_google(audio)
 
             # Get answer using the text question
-            async with httpx.AsyncClient() as client:
+            async with pool.get_client() as client:
                 response = await client.post(
                     f"{self.api_url}/api/ask",
                     json={
