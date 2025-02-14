@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 class DocumentService:
-    def __init__(self):
+    def __init__(self) -> None:
         self.upload_dir = Path(settings.UPLOAD_DIR)
         self.upload_dir.mkdir(exist_ok=True)
 
@@ -75,8 +75,10 @@ class DocumentService:
         """List all uploaded documents."""
         documents = []
         for file_path in self.upload_dir.glob('*'):
-            if any(file_path.name.endswith(ext) 
-                  for ext in settings.ALLOWED_EXTENSIONS):
+            if any(
+                file_path.name.endswith(ext)
+                for ext in settings.ALLOWED_EXTENSIONS
+            ):
                 doc_id = file_path.stem
                 stat = file_path.stat()
                 documents.append(
@@ -96,8 +98,10 @@ class DocumentService:
             'txt': 'text/plain',
             'pdf': 'application/pdf',
             'doc': 'application/msword',
-            'docx': ('application/vnd.openxmlformats-officedocument.'
-                    'wordprocessingml.document')
+            'docx': (
+                'application/vnd.openxmlformats-officedocument.'
+                'wordprocessingml.document'
+            )
         }
         return content_types.get(ext, 'application/octet-stream')
 
@@ -107,10 +111,13 @@ class DocumentService:
             'text/plain': ['txt'],
             'application/pdf': ['pdf'],
             'application/msword': ['doc'],
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx']
+            'application/vnd.openxmlformats-officedocument.'
+            'wordprocessingml.document': ['docx']
         }
-        return any(ext in settings.ALLOWED_EXTENSIONS 
-                  for ext in allowed_mimes.get(mime_type, []))
+        return any(
+            ext in settings.ALLOWED_EXTENSIONS
+            for ext in allowed_mimes.get(mime_type, [])
+        )
 
     def _verify_file_hash(self, file_path: Path, expected_hash: str) -> bool:
         """Verify file content hash."""

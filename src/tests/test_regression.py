@@ -2,20 +2,20 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.services.document import DocumentService
-from app.services.llm import LLMService
 import tempfile
 import os
-from pathlib import Path
 import hashlib
+from typing import List, Generator
 
 
 @pytest.fixture
-def test_client():
+def test_client() -> TestClient:
+    """Create a test client."""
     return TestClient(app)
 
 
 @pytest.fixture
-def test_files():
+def test_files() -> Generator[List[str], None, None]:
     """Create test files with known content."""
     files = []
     content = "Test document content for regression testing."
@@ -37,7 +37,11 @@ def test_files():
 class TestRegression:
     """Regression tests for core functionality."""
 
-    def test_document_upload_regression(self, test_client, test_files):
+    def test_document_upload_regression(
+        self,
+        test_client: TestClient,
+        test_files: List[str]
+    ) -> None:
         """Test document upload functionality hasn't regressed."""
         for file_path in test_files:
             with open(file_path, "rb") as f:
@@ -48,7 +52,11 @@ class TestRegression:
                 assert response.status_code == 200
                 assert "document_id" in response.json()
 
-    def test_document_listing_regression(self, test_client, test_files):
+    def test_document_listing_regression(
+        self,
+        test_client: TestClient,
+        test_files: List[str]
+    ) -> None:
         """Test document listing functionality hasn't regressed."""
         # Upload test files
         uploaded_ids = []
@@ -70,7 +78,11 @@ class TestRegression:
         for doc_id in uploaded_ids:
             assert doc_id in listed_ids
 
-    def test_qa_regression(self, test_client, test_files):
+    def test_qa_regression(
+        self,
+        test_client: TestClient,
+        test_files: List[str]
+    ) -> None:
         """Test Q&A functionality hasn't regressed."""
         # Upload a test document
         with open(test_files[0], "rb") as f:
@@ -98,7 +110,7 @@ class TestRegression:
             assert response.status_code == 200
             assert "answer" in response.json()
 
-    def test_security_regression(self, test_client):
+    def test_security_regression(self, test_client: TestClient) -> None:
         """Test security measures haven't regressed."""
         # Test file size limit
         large_content = "x" * (10 * 1024 * 1024 + 1)  # Exceeds 10MB
@@ -123,7 +135,11 @@ class TestRegression:
             assert response.status_code == 400
             assert "not allowed" in response.json()["detail"].lower()
 
-    def test_file_integrity_regression(self, test_client, test_files):
+    def test_file_integrity_regression(
+        self,
+        test_client: TestClient,
+        test_files: List[str]
+    ) -> None:
         """Test file integrity checks haven't regressed."""
         # Upload a file and verify its hash
         with open(test_files[0], "rb") as f:

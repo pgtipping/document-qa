@@ -5,10 +5,12 @@ import os
 import tempfile
 import shutil
 from app.core.config import settings
+from typing import AsyncGenerator
 
 
 @pytest.fixture
-def document_service():
+async def document_service() -> AsyncGenerator[DocumentService, None]:
+    """Create a document service with temporary upload directory."""
     # Create a temporary directory for testing
     test_upload_dir = tempfile.mkdtemp()
     settings.UPLOAD_DIR = test_upload_dir
@@ -21,16 +23,30 @@ def document_service():
 
 
 @pytest.fixture
-def sample_file():
+async def sample_file() -> AsyncGenerator[UploadFile, None]:
+    """Create a sample file for testing."""
     content = b"Test document content"
-    return UploadFile(
+    temp_file = tempfile.SpooledTemporaryFile()
+    temp_file.write(content)
+    temp_file.seek(0)
+    
+    file = UploadFile(
         filename="test.txt",
-        file=tempfile.SpooledTemporaryFile()._file,
+        file=temp_file,
         content_type="text/plain"
     )
+    yield file
+    
+    # Cleanup
+    await file.close()
+    temp_file.close()
 
 
-async def test_save_document(document_service, sample_file):
+async def test_save_document(
+    document_service: DocumentService,
+    sample_file: UploadFile
+) -> None:
+    """Test saving a valid document."""
     # Test saving a valid document
     document_id = await document_service.save_document(sample_file)
     assert document_id is not None
@@ -42,19 +58,29 @@ async def test_save_document(document_service, sample_file):
     assert files[0].startswith(document_id)
 
 
-async def test_invalid_extension(document_service):
+async def test_invalid_extension(document_service: DocumentService) -> None:
+    """Test saving a file with invalid extension."""
     # Test saving a file with invalid extension
+    temp_file = tempfile.SpooledTemporaryFile()
     invalid_file = UploadFile(
         filename="test.invalid",
-        file=tempfile.SpooledTemporaryFile()._file
+        file=temp_file
     )
     
     with pytest.raises(HTTPException) as exc_info:
         await document_service.save_document(invalid_file)
     assert exc_info.value.status_code == 400
+    
+    # Cleanup
+    await invalid_file.close()
+    temp_file.close()
 
 
-async def test_list_documents(document_service, sample_file):
+async def test_list_documents(
+    document_service: DocumentService,
+    sample_file: UploadFile
+) -> None:
+    """Test listing documents."""
     # Save a test document
     document_id = await document_service.save_document(sample_file)
     
