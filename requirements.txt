@@ -1,2 +1,15 @@
 streamlit
 openai
+gradio>=4.19.2
+groq>=0.4.2
+vercel-ai-sdk>=0.1.4
+python-dotenv>=1.0.1
+pydantic>=2.6.1
+pytest>=8.0.0
+pytest-asyncio>=0.23.5
+python-multipart>=0.0.9
+typing-extensions>=4.9.0
+uvicorn>=0.27.1
+fastapi>=0.109.2
+langchain>=0.1.9
+langchain-groq>=0.0.1
