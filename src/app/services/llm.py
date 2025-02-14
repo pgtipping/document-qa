@@ -1,7 +1,6 @@
 from groq import Groq
 from app.core.config import settings
 from app.services.document import DocumentService
-import aiofiles
 import hashlib
 from typing import Dict, Tuple
 import time
@@ -26,13 +25,12 @@ class LLMService:
         if cached_response:
             return cached_response
 
-        # Get document content
-        doc_path = await self.document_service.get_document_path(document_id)
-        async with aiofiles.open(doc_path, 'r') as f:
-            content = await f.read()
+        # Get document content using optimized method
+        content = await self.document_service.get_document_content(document_id)
+        content_str = content.decode('utf-8')
 
         # Prepare prompt
-        prompt = self._create_prompt(content, question)
+        prompt = self._create_prompt(content_str, question)
 
         # Get response from Groq
         response = await self.client.chat.completions.create(
