@@ -1,28 +1,27 @@
-from pydantic_settings import BaseSettings
-from typing import Optional
-import os
-from dotenv import load_dotenv
+"""Configuration settings for the Document Q&A application."""
 
-load_dotenv()
+import os
+from typing import Set
+
+from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
-    # API Configuration
-    API_V1_STR: str = "/api/v1"
-    PROJECT_NAME: str = "Document Q&A"
+    """Application settings."""
     
-    # LLM Configuration
-    GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY")
-    MODEL_NAME: str = "llama2-70b-4096"
-    
-    # Document Storage
-    UPLOAD_DIR: str = "uploads"
+    # File upload settings
+    UPLOAD_DIR: str = os.path.join(os.getcwd(), "uploads")
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
-    ALLOWED_EXTENSIONS: set = {"txt", "pdf", "doc", "docx"}
+    ALLOWED_EXTENSIONS: Set[str] = {"txt", "pdf", "doc", "docx"}
     
-    # Security
-    MAX_REQUESTS_PER_MINUTE: int = 60
+    # API settings
+    GROQ_API_KEY: str
+    MODEL_NAME: str = "mixtral-8x7b-32768"
     
     class Config:
-        case_sensitive = True
+        """Pydantic config."""
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
-settings = Settings() 
+
+settings = Settings()  # type: ignore[call-arg] 
