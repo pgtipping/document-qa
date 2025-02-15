@@ -9,7 +9,7 @@ from app.core.exceptions import (
     InvalidFileTypeError,
     FileSizeLimitError
 )
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, cast
 import aiofiles
 import hashlib
 from pathlib import Path
@@ -64,7 +64,7 @@ class DocumentService:
                 raise FileSizeLimitError("File verification failed")
 
             # Cache the content
-            self._cache_content(document_id, content)
+            self._cache_content(document_id, cast(bytes, content))
             self._cache_path(document_id, file_path)
 
             return document_id
@@ -100,8 +100,8 @@ class DocumentService:
         path = await self.get_document_path(document_id)
         async with aiofiles.open(path, 'rb') as f:
             content = await f.read()
-            self._cache_content(document_id, content)
-            return content
+            self._cache_content(document_id, cast(bytes, content))
+            return cast(bytes, content)
 
     async def list_documents(self) -> List[Document]:
         """List all uploaded documents with parallel processing."""
@@ -188,7 +188,11 @@ class DocumentService:
             for ext in allowed_mimes.get(mime_type, [])
         )
 
-    async def _verify_file_hash(self, file_path: Path, expected_hash: str) -> bool:
+    async def _verify_file_hash(
+        self,
+        file_path: Path,
+        expected_hash: str
+    ) -> bool:
         """Verify file content hash asynchronously."""
         async with aiofiles.open(file_path, 'rb') as f:
             content = await f.read()
