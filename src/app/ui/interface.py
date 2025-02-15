@@ -4,6 +4,11 @@ import speech_recognition as sr
 import os
 from datetime import datetime
 from app.core.connection import pool
+from app.core.error_recovery import (
+    CircuitBreaker,
+    with_retry,
+    resilient_operation
+)
 
 
 class DocumentQAInterface:
@@ -11,6 +16,7 @@ class DocumentQAInterface:
         self.api_url = api_url
         self.current_document_id: Optional[str] = None
         self.recognizer = sr.Recognizer()
+        self.circuit_breaker = CircuitBreaker()
 
     def create_interface(self) -> gr.Blocks:
         """Create the Gradio interface."""
@@ -103,34 +109,42 @@ class DocumentQAInterface:
         """Handle document upload."""
         try:
             files = {"file": (file.name, open(file.name, "rb"))}
-            async with pool.get_client() as client:
-                response = await client.post(
-                    f"{self.api_url}/api/upload",
-                    files=files
-                )
-                response.raise_for_status()
+            async with resilient_operation(
+                circuit_breaker=self.circuit_breaker,
+                max_retries=3
+            ):
+                async with pool.get_client() as client:
+                    response = await client.post(
+                        f"{self.api_url}/api/upload",
+                        files=files
+                    )
+                    response.raise_for_status()
             return await self._refresh_documents()
         except Exception as e:
             raise gr.Error(f"Upload failed: {str(e)}")
 
+    @with_retry(max_retries=3)
     async def _refresh_documents(self) -> List[List[str]]:
         """Refresh the document list with formatted details."""
         try:
-            async with pool.get_client() as client:
-                response = await client.get(f"{self.api_url}/api/documents")
-                response.raise_for_status()
-                documents = response.json()["documents"]
-                
-                # Format document details
-                return [
-                    [
-                        doc["filename"],
-                        self._format_size(doc["size"]),
-                        doc["content_type"].split("/")[-1].upper(),
-                        self._format_date(doc["upload_date"])
+            async with resilient_operation(circuit_breaker=self.circuit_breaker):
+                async with pool.get_client() as client:
+                    response = await client.get(
+                        f"{self.api_url}/api/documents"
+                    )
+                    response.raise_for_status()
+                    documents = response.json()["documents"]
+                    
+                    # Format document details
+                    return [
+                        [
+                            doc["filename"],
+                            self._format_size(doc["size"]),
+                            doc["content_type"].split("/")[-1].upper(),
+                            self._format_date(doc["upload_date"])
+                        ]
+                        for doc in documents
                     ]
-                    for doc in documents
-                ]
         except Exception as e:
             raise gr.Error(f"Failed to fetch documents: {str(e)}")
 
@@ -165,19 +179,23 @@ class DocumentQAInterface:
             raise gr.Error("Please enter a question")
         
         try:
-            async with pool.get_client() as client:
-                response = await client.post(
-                    f"{self.api_url}/api/ask",
-                    json={
-                        "document_id": self.current_document_id,
-                        "question": question
-                    }
-                )
-                response.raise_for_status()
-                answer = response.json()["answer"]
-                
-                history.append([question, answer])
-                return "", history
+            async with resilient_operation(
+                circuit_breaker=self.circuit_breaker,
+                max_retries=3
+            ):
+                async with pool.get_client() as client:
+                    response = await client.post(
+                        f"{self.api_url}/api/ask",
+                        json={
+                            "document_id": self.current_document_id,
+                            "question": question
+                        }
+                    )
+                    response.raise_for_status()
+                    answer = response.json()["answer"]
+                    
+                    history.append([question, answer])
+                    return "", history
         except Exception as e:
             raise gr.Error(f"Failed to get answer: {str(e)}")
 
@@ -197,19 +215,23 @@ class DocumentQAInterface:
                 question = self.recognizer.recognize_google(audio)
 
             # Get answer using the text question
-            async with pool.get_client() as client:
-                response = await client.post(
-                    f"{self.api_url}/api/ask",
-                    json={
-                        "document_id": self.current_document_id,
-                        "question": question
-                    }
-                )
-                response.raise_for_status()
-                answer = response.json()["answer"]
+            async with resilient_operation(
+                circuit_breaker=self.circuit_breaker,
+                max_retries=3
+            ):
+                async with pool.get_client() as client:
+                    response = await client.post(
+                        f"{self.api_url}/api/ask",
+                        json={
+                            "document_id": self.current_document_id,
+                            "question": question
+                        }
+                    )
+                    response.raise_for_status()
+                    answer = response.json()["answer"]
 
-                history.append([f"🎤 {question}", answer])
-                return None, history
+                    history.append([f"🎤 {question}", answer])
+                    return None, history
 
         except sr.UnknownValueError:
             raise gr.Error("Could not understand audio")
