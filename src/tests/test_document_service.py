@@ -5,10 +5,10 @@ import os
 import tempfile
 import shutil
 from app.core.config import settings
-from typing import AsyncGenerator
+from typing import AsyncGenerator, BinaryIO, cast
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 async def document_service() -> AsyncGenerator[DocumentService, None]:
     """Create a document service with temporary upload directory."""
     # Create a temporary directory for testing
@@ -22,7 +22,7 @@ async def document_service() -> AsyncGenerator[DocumentService, None]:
     shutil.rmtree(test_upload_dir)
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 async def sample_file() -> AsyncGenerator[UploadFile, None]:
     """Create a sample file for testing."""
     content = b"Test document content"
@@ -30,10 +30,12 @@ async def sample_file() -> AsyncGenerator[UploadFile, None]:
     temp_file.write(content)
     temp_file.seek(0)
     
+    # Cast to BinaryIO to satisfy type checker
+    binary_file = cast(BinaryIO, temp_file)
+    
     file = UploadFile(
         filename="test.txt",
-        file=temp_file,
-        content_type="text/plain"
+        file=binary_file
     )
     yield file
     
@@ -62,9 +64,11 @@ async def test_invalid_extension(document_service: DocumentService) -> None:
     """Test saving a file with invalid extension."""
     # Test saving a file with invalid extension
     temp_file = tempfile.SpooledTemporaryFile()
+    binary_file = cast(BinaryIO, temp_file)
+    
     invalid_file = UploadFile(
         filename="test.invalid",
-        file=temp_file
+        file=binary_file
     )
     
     with pytest.raises(HTTPException) as exc_info:

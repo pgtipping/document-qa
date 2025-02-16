@@ -8,13 +8,16 @@ import hashlib
 from typing import List, Generator
 
 
-@pytest.fixture
+pytestmark = pytest.mark.asyncio
+
+
+@pytest.fixture  # type: ignore[misc]
 def test_client() -> TestClient:
     """Create a test client."""
     return TestClient(app)
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def test_files() -> Generator[List[str], None, None]:
     """Create test files with known content."""
     files = []
@@ -135,7 +138,7 @@ class TestRegression:
             assert response.status_code == 400
             assert "not allowed" in response.json()["detail"].lower()
 
-    def test_file_integrity_regression(
+    async def test_file_integrity_regression(
         self,
         test_client: TestClient,
         test_files: List[str]
@@ -156,8 +159,8 @@ class TestRegression:
 
         # Verify the stored file matches the original
         doc_service = DocumentService()
-        file_path = doc_service.get_document_path(document_id)
-        with open(file_path, "rb") as f:
+        file_path = await doc_service.get_document_path(document_id)
+        with open(str(file_path), "rb") as f:
             stored_content = f.read()
             stored_hash = hashlib.sha256(stored_content).hexdigest()
             assert stored_hash == original_hash 

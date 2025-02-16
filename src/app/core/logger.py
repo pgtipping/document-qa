@@ -1,3 +1,4 @@
+"""Error logging and tracking system for Document Q&A."""
 import logging
 from pathlib import Path
 from datetime import datetime
@@ -31,7 +32,7 @@ class ErrorLogger:
         handler.setLevel(logging.ERROR)
         
         formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
@@ -59,7 +60,8 @@ class ErrorLogger:
         
         # Log to file
         self.logger.error(
-            f"Error in {source}: {error_type} - {error_msg}",
+            "Error in %s: %s - %s",
+            source, error_type, error_msg,
             extra={"context": context}
         )
         
@@ -80,13 +82,13 @@ class ErrorLogger:
 
     def _load_error_tracking(self) -> ErrorStats:
         """Load error tracking data."""
-        with open(self.error_file) as f:
+        with open(self.error_file, encoding="utf-8") as f:
             data: ErrorStats = json.load(f)
-            return data
+        return data
 
     def _save_error_tracking(self, data: ErrorStats) -> None:
         """Save error tracking data."""
-        with open(self.error_file, 'w') as f:
+        with open(self.error_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
     def get_error_summary(self) -> ErrorStats:

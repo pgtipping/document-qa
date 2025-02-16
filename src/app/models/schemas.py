@@ -28,4 +28,4 @@ class Document(BaseModel):
     upload_date: datetime = Field(
         default_factory=datetime.now,
         description="Date and time of upload"
-    ) 
+    )

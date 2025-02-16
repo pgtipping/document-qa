@@ -1,4 +1,5 @@
-from typing import TypeVar, Callable, Any, Optional, AsyncGenerator
+"""Module for error recovery and resilience patterns."""
+from typing import TypeVar, Callable, Any, Optional, AsyncGenerator, Type
 import asyncio
 from datetime import datetime, timedelta
 from functools import wraps
@@ -37,8 +38,19 @@ class CircuitBreaker:
         """Enter the circuit breaker context."""
         await self.before_call()
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Exit the circuit breaker context."""
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[Any]
+    ) -> None:
+        """Exit the circuit breaker context.
+        
+        Args:
+            exc_type: The type of the exception that was raised, if any
+            exc_val: The instance of the exception that was raised, if any
+            exc_tb: The traceback of the exception that was raised, if any
+        """
         if exc_type is not None:
             await self.on_failure()
         else:
@@ -50,18 +62,24 @@ class CircuitBreaker:
             now = datetime.now()
             
             if self.state == "open":
-                if (self.last_failure_time and 
-                    now - self.last_failure_time > 
-                    timedelta(seconds=self.reset_timeout)):
+                if (
+                    self.last_failure_time
+                    and now - self.last_failure_time > timedelta(
+                        seconds=self.reset_timeout
+                    )
+                ):
                     self.state = "half-open"
                     logger.info("Circuit breaker entering half-open state")
                 else:
                     raise CircuitBreakerError("Circuit is open")
             
             elif self.state == "half-open":
-                if (self.last_failure_time and 
-                    now - self.last_failure_time > 
-                    timedelta(seconds=self.half_open_timeout)):
+                if (
+                    self.last_failure_time
+                    and now - self.last_failure_time > timedelta(
+                        seconds=self.half_open_timeout
+                    )
+                ):
                     self.state = "closed"
                     self.failures = 0
                     logger.info("Circuit breaker reset to closed state")
@@ -89,7 +107,6 @@ class CircuitBreaker:
 
 class CircuitBreakerError(Exception):
     """Raised when circuit breaker prevents operation."""
-    pass
 
 
 def with_retry(

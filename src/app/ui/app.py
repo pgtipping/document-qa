@@ -1,5 +1,5 @@
-from app.ui.interface import create_app
-import os
+"""Main entry point for the Document Q&A application."""
+from app.ui.interface import launch_interface
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -8,13 +8,8 @@ load_dotenv()
 
 def main() -> None:
     """Launch the Gradio interface."""
-    interface = create_app()
-    interface.launch(
-        server_name="0.0.0.0",
-        server_port=int(os.getenv("PORT", "7860")),
-        share=False
-    )
+    launch_interface()
 
 
 if __name__ == "__main__":
-    main() 
+    main()

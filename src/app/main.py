@@ -1,7 +1,9 @@
+"""Main application module."""
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router as api_router
-from app.core.config import settings
 
 app = FastAPI(
     title="Document Q&A API",
@@ -18,5 +20,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    """Root endpoint providing API information."""
+    return {
+        "message": "Welcome to Document Q&A API",
+        "version": "1.0.0",
+        "documentation": {
+            "swagger": "/docs",
+            "redoc": "/redoc"
+        },
+        "endpoints": {
+            "upload_document": "/api/upload",
+            "ask_question": "/api/ask",
+            "list_documents": "/api/documents"
+        },
+        "ui": "http://localhost:7860"  # Gradio interface URL
+    }
+
 # Include API routes
-app.include_router(api_router, prefix="/api") 
+app.include_router(api_router, prefix="/api")
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000) 

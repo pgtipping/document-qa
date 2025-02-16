@@ -2,21 +2,24 @@ from groq import Groq
 from app.core.config import settings
 from app.services.document import DocumentService
 import hashlib
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple, Any, cast
 import time
 
 
 class LLMService:
     def __init__(self) -> None:
-        if not settings.GROQ_API_KEY:
-            raise ValueError("GROQ_API_KEY not set in environment variables")
-        self.client = Groq(api_key=settings.GROQ_API_KEY)
+        """Initialize the LLM service."""
+        self.api_key = settings.GROQ_API_KEY
+        self.client = Groq(api_key=self.api_key)
         self.document_service = DocumentService()
         self.cache: Dict[str, Tuple[str, float]] = {}
         self.cache_ttl = 3600  # Cache TTL in seconds (1 hour)
 
     async def get_answer(self, document_id: str, question: str) -> str:
         """Get an answer from the LLM based on the document content."""
+        if not self.api_key:
+            raise ValueError("GROQ_API_KEY not set in environment variables")
+            
         # Generate cache key
         cache_key = self._generate_cache_key(document_id, question)
         
@@ -33,7 +36,8 @@ class LLMService:
         prompt = self._create_prompt(content_str, question)
 
         # Get response from Groq
-        response = await self.client.chat.completions.create(
+        # Cast the client call to Any to handle async compatibility
+        response = await cast(Any, self.client.chat.completions.create(
             model=settings.MODEL_NAME,
             messages=[
                 {
@@ -48,7 +52,7 @@ class LLMService:
             ],
             temperature=0.7,
             max_tokens=500
-        )
+        ))
 
         answer = str(response.choices[0].message.content)
         
@@ -62,7 +66,7 @@ class LLMService:
         combined = f"{document_id}:{question.lower().strip()}"
         return hashlib.sha256(combined.encode()).hexdigest()
 
-    def _get_from_cache(self, cache_key: str) -> str | None:
+    def _get_from_cache(self, cache_key: str) -> Optional[str]:
         """Get a response from cache if it exists and is not expired."""
         if cache_key in self.cache:
             answer, timestamp = self.cache[cache_key]
